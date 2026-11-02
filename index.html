@@ -159,7 +159,15 @@
 
     /* Touch-first embeds can expose a desktop-sized iframe viewport in Notion. */
     @media (max-width: 720px), (pointer: coarse), (hover: none) {
-      html { overflow-x: hidden; }
+      html {
+        width: 100%;
+        min-height: 100%;
+        height: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+      }
       body {
         display: flex;
         flex-direction: column;
@@ -168,8 +176,9 @@
         min-height: 100vh;
         min-height: 100dvh;
         overflow-x: hidden;
-        overflow-y: auto;
-        overscroll-behavior-y: contain;
+        overflow-y: visible;
+        overscroll-behavior-y: auto;
+        touch-action: pan-y;
       }
       #canvas-container {
         flex: 0 0 auto;
@@ -582,8 +591,17 @@
         section.open = !mobileLayout.matches;
       });
     }
+    function syncTouchScrolling() {
+      // OrbitControls normally sets touch-action:none, which blocks page scrolling.
+      // Let vertical swipes scroll the embedded page on touch devices.
+      renderer.domElement.style.touchAction = mobileLayout.matches ? 'pan-y' : 'none';
+    }
     syncControlDisclosure();
-    mobileLayout.addEventListener('change', syncControlDisclosure);
+    syncTouchScrolling();
+    mobileLayout.addEventListener('change', () => {
+      syncControlDisclosure();
+      syncTouchScrolling();
+    });
 
     const resizeObserver = new ResizeObserver(resizeRenderer);
     resizeObserver.observe(container);
