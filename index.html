@@ -157,7 +157,8 @@
     }
     .mobile-collapsible > summary::-webkit-details-marker { display: none; }
 
-    @media (max-width: 720px) {
+    /* Touch-first embeds can expose a desktop-sized iframe viewport in Notion. */
+    @media (max-width: 720px), (pointer: coarse), (hover: none) {
       html { overflow-x: hidden; }
       body {
         display: flex;
@@ -282,7 +283,7 @@
     </div>
 
     <!-- 主量子数 n -->
-    <details class="control-group mobile-collapsible" open>
+    <details class="control-group mobile-collapsible">
       <summary class="control-title">
         <span>1. 主量子数 n (第几层楼)</span>
         <span id="layer-name" style="color:var(--accent);">L 层</span>
@@ -292,7 +293,7 @@
     </details>
 
     <!-- 角量子数 l -->
-    <details class="control-group mobile-collapsible" open>
+    <details class="control-group mobile-collapsible">
       <summary class="control-title">
         <span>2. 角量子数 l (什么户型)</span>
         <span id="l-limit" style="color:var(--accent);">范围: 0 ~ n-1</span>
@@ -302,7 +303,7 @@
     </details>
 
     <!-- 磁量子数 m -->
-    <details class="control-group mobile-collapsible" open>
+    <details class="control-group mobile-collapsible">
       <summary class="control-title">
         <span>3. 磁量子数 m (哪间房/朝向)</span>
         <span id="m-limit" style="color:var(--accent);">共 2l+1 个</span>
@@ -312,7 +313,7 @@
     </details>
 
     <!-- 自旋量子数 ms -->
-    <details class="control-group mobile-collapsible" open>
+    <details class="control-group mobile-collapsible">
       <summary class="control-title">
         <span>4. 自旋量子数 m<sub>s</sub> (上下铺)</span>
         <span style="color:var(--accent);">±1/2</span>
@@ -321,7 +322,7 @@
       <div class="btn-row" id="ms-buttons"></div>
     </details>
 
-    <details class="control-group mobile-collapsible analogy-group" open>
+    <details class="control-group mobile-collapsible analogy-group">
       <summary class="control-title">四级定位解读</summary>
       <div class="info-box" id="analogy-box"></div>
     </details>
@@ -571,7 +572,11 @@
     }
 
     const responsiveControls = document.querySelectorAll('.mobile-collapsible');
-    const mobileLayout = window.matchMedia('(max-width: 720px)');
+    // Notion's phone app may size the iframe as a desktop viewport. Detect touch
+    // devices too, so controls collapse even when max-width alone misses the phone.
+    const mobileLayout = window.matchMedia(
+      '(max-width: 720px), (pointer: coarse), (hover: none)'
+    );
     function syncControlDisclosure() {
       responsiveControls.forEach((section) => {
         section.open = !mobileLayout.matches;
