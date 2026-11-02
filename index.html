@@ -131,16 +131,16 @@
       line-height: 1.5;
     }
     .legend {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
+      position: static;
+      flex: 0 0 auto;
       background: var(--panel);
       padding: 10px 14px;
       border-radius: 8px;
       border: 1px solid var(--border);
       font-size: 0.8rem;
       display: flex;
-      gap: 16px;
+      flex-wrap: wrap;
+      gap: 8px 12px;
       pointer-events: none;
     }
     .dot {
@@ -260,14 +260,10 @@
       .info-box { padding: 8px; font-size: 0.74rem; line-height: 1.45; }
       .analogy-group .control-title { min-height: 22px; }
       .legend {
-        top: 10px;
-        right: 10px;
-        bottom: auto;
-        left: 10px;
-        flex-wrap: wrap;
-        gap: 6px 10px;
-        padding: 8px 10px;
-        font-size: 0.7rem;
+        margin: 0;
+        padding: 6px 7px;
+        gap: 5px 8px;
+        font-size: 0.68rem;
       }
     }
 
@@ -289,13 +285,7 @@
 </head>
 <body>
   <main id="app-scroll">
-  <div id="canvas-container">
-    <div class="legend">
-      <div><span class="dot" style="background:#3b82f6;"></span>波函数正相位 (+)</div>
-      <div><span class="dot" style="background:#f43f5e;"></span>波函数负相位 (-)</div>
-      <div><span class="dot" style="background:#94a3b8;"></span>径向节面数: <span id="radial-nodes">0</span></div>
-    </div>
-  </div>
+  <div id="canvas-container"></div>
 
   <div class="sidebar">
     <div class="header-card">
@@ -304,6 +294,12 @@
         <div class="orbital-badge" id="orbital-title">2p<sub>z</sub></div>
       </div>
       <div class="spin-badge" id="spin-display">m<sub>s</sub> = +1/2 ↑</div>
+    </div>
+
+    <div class="legend" aria-label="轨道图例">
+      <div><span class="dot" style="background:#3b82f6;"></span>波函数正相位 (+)</div>
+      <div><span class="dot" style="background:#f43f5e;"></span>波函数负相位 (-)</div>
+      <div><span class="dot" style="background:#94a3b8;"></span>径向节面数: <span id="radial-nodes">0</span></div>
     </div>
 
     <!-- 主量子数 n -->
