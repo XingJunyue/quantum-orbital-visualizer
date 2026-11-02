@@ -151,6 +151,12 @@
       height: 100%;
     }
 
+    .mobile-collapsible > summary {
+      cursor: pointer;
+      list-style: none;
+    }
+    .mobile-collapsible > summary::-webkit-details-marker { display: none; }
+
     @media (max-width: 720px) {
       html { overflow-x: hidden; }
       body {
@@ -167,10 +173,10 @@
       #canvas-container {
         flex: 0 0 auto;
         width: 100%;
-        height: 40vh;
-        height: 40dvh;
-        min-height: 250px;
-        max-height: 380px;
+        height: 22vh;
+        height: 22dvh;
+        min-height: 145px;
+        max-height: 220px;
       }
       .sidebar {
         flex: 0 0 auto;
@@ -181,41 +187,53 @@
         overflow: visible;
         border-left: 0;
         border-top: 1px solid var(--border);
-        padding: 12px 12px calc(18px + env(safe-area-inset-bottom));
-        gap: 12px;
+        padding: 8px 9px calc(12px + env(safe-area-inset-bottom));
+        gap: 7px;
       }
       .header-card {
         min-width: 0;
-        gap: 8px;
-        padding: 12px;
+        gap: 7px;
+        padding: 8px;
         flex-wrap: wrap;
       }
-      .orbital-badge { font-size: clamp(1.8rem, 9vw, 2.2rem); }
+      .orbital-badge { font-size: clamp(1.45rem, 7vw, 1.8rem); }
       .spin-badge {
-        font-size: clamp(0.85rem, 4vw, 1rem);
-        padding: 6px 8px;
+        font-size: clamp(0.78rem, 3.6vw, 0.92rem);
+        padding: 5px 7px;
       }
-      .control-group { min-width: 0; padding: 11px; }
+      .control-group { min-width: 0; padding: 7px 9px; }
       .control-title {
         align-items: flex-start;
-        gap: 8px;
-        font-size: 0.86rem;
+        gap: 6px;
+        margin-bottom: 0;
+        font-size: 0.78rem;
       }
+      .mobile-collapsible > summary::after {
+        content: "+";
+        flex: 0 0 auto;
+        margin-left: 4px;
+        color: var(--accent);
+        font-size: 1rem;
+      }
+      .mobile-collapsible[open] > summary { margin-bottom: 6px; }
+      .mobile-collapsible[open] > summary::after { content: "−"; }
       .control-title > span:first-child { min-width: 0; }
       .control-title > span:last-child {
         flex: 0 0 auto;
         text-align: right;
       }
-      .control-sub { line-height: 1.45; }
-      .btn-row { gap: 7px; }
+      .control-sub { font-size: 0.7rem; line-height: 1.4; margin-bottom: 6px; }
+      .btn-row { gap: 5px; }
       button {
-        flex: 1 1 60px;
+        flex: 1 1 52px;
         min-width: 0;
-        padding: 10px 5px;
-        font-size: clamp(0.74rem, 3.5vw, 0.85rem);
+        min-height: 36px;
+        padding: 6px 4px;
+        font-size: clamp(0.7rem, 3.3vw, 0.78rem);
       }
       #ms-buttons button { flex-basis: calc(50% - 4px); }
-      .info-box { line-height: 1.55; }
+      .info-box { padding: 8px; font-size: 0.74rem; line-height: 1.45; }
+      .analogy-group .control-title { min-height: 22px; }
       .legend {
         top: 10px;
         right: 10px;
@@ -231,6 +249,7 @@
     @media (max-width: 380px) {
       .control-title { flex-direction: column; }
       .control-title > span:last-child { text-align: left; }
+      .mobile-collapsible > summary::after { align-self: flex-end; margin-top: -1.25rem; }
     }
   </style>
   <!-- Import Three.js via ES Module Map -->
@@ -263,46 +282,49 @@
     </div>
 
     <!-- 主量子数 n -->
-    <div class="control-group">
-      <div class="control-title">
+    <details class="control-group mobile-collapsible" open>
+      <summary class="control-title">
         <span>1. 主量子数 n (第几层楼)</span>
         <span id="layer-name" style="color:var(--accent);">L 层</span>
-      </div>
+      </summary>
       <div class="control-sub">取值：正整数 1, 2, 3, 4... 决定轨道大小与主能量</div>
       <div class="btn-row" id="n-buttons"></div>
-    </div>
+    </details>
 
     <!-- 角量子数 l -->
-    <div class="control-group">
-      <div class="control-title">
+    <details class="control-group mobile-collapsible" open>
+      <summary class="control-title">
         <span>2. 角量子数 l (什么户型)</span>
         <span id="l-limit" style="color:var(--accent);">范围: 0 ~ n-1</span>
-      </div>
+      </summary>
       <div class="control-sub">铁律：l 最大只能取到 n-1，决定轨道形状 (s/p/d/f)</div>
       <div class="btn-row" id="l-buttons"></div>
-    </div>
+    </details>
 
     <!-- 磁量子数 m -->
-    <div class="control-group">
-      <div class="control-title">
+    <details class="control-group mobile-collapsible" open>
+      <summary class="control-title">
         <span>3. 磁量子数 m (哪间房/朝向)</span>
         <span id="m-limit" style="color:var(--accent);">共 2l+1 个</span>
-      </div>
+      </summary>
       <div class="control-sub">范围：-l 到 +l，决定空间伸展方向</div>
       <div class="btn-row" id="m-buttons"></div>
-    </div>
+    </details>
 
     <!-- 自旋量子数 ms -->
-    <div class="control-group">
-      <div class="control-title">
+    <details class="control-group mobile-collapsible" open>
+      <summary class="control-title">
         <span>4. 自旋量子数 m<sub>s</sub> (上下铺)</span>
         <span style="color:var(--accent);">±1/2</span>
-      </div>
+      </summary>
       <div class="control-sub">决定电子自旋方向，每个轨道最多容纳 2 个反平行电子</div>
       <div class="btn-row" id="ms-buttons"></div>
-    </div>
+    </details>
 
-    <div class="info-box" id="analogy-box"></div>
+    <details class="control-group mobile-collapsible analogy-group" open>
+      <summary class="control-title">四级定位解读</summary>
+      <div class="info-box" id="analogy-box"></div>
+    </details>
   </div>
 
   <script type="module">
@@ -547,6 +569,16 @@
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.setSize(width, height, false);
     }
+
+    const responsiveControls = document.querySelectorAll('.mobile-collapsible');
+    const mobileLayout = window.matchMedia('(max-width: 720px)');
+    function syncControlDisclosure() {
+      responsiveControls.forEach((section) => {
+        section.open = !mobileLayout.matches;
+      });
+    }
+    syncControlDisclosure();
+    mobileLayout.addEventListener('change', syncControlDisclosure);
 
     const resizeObserver = new ResizeObserver(resizeRenderer);
     resizeObserver.observe(container);
