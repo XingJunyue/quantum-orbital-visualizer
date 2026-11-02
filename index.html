@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>无机化学四个量子数与3D原子轨道可视化</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: rgba(30, 41, 59, 0.88);
+      --border: rgba(148, 163, 184, 0.2);
+      --accent: #38bdf8;
+      --pos-phase: #3b82f6;
+      --neg-phase: #f43f5e;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      display: flex;
+      height: 100vh;
+    }
+    #canvas-container {
+      flex: 1;
+      position: relative;
+      height: 100%;
+    }
+    .sidebar {
+      width: 380px;
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border-left: 1px solid var(--border);
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 10;
+    }
+    .header-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .orbital-badge {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+    .spin-badge {
+      font-size: 1.1rem;
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .control-group {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .control-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .control-sub {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    button {
+      flex: 1;
+      min-width: 44px;
+      padding: 8px 6px;
+      background: rgba(51, 65, 85, 0.6);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.15s ease;
+    }
+    button:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.2);
+    }
+    button.active {
+      background: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+    }
+    button:disabled {
+      opacity: 0.28;
+      cursor: not-allowed;
+    }
+    .info-box {
+      background: rgba(15, 23, 42, 0.6);
+      border-left: 3px solid var(--accent);
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: var(--panel);
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      display: flex;
+      gap: 16px;
+      pointer-events: none;
+    }
+    .dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+  </style>
+  <!-- Import Three.js via ES Module Map -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <div id="canvas-container">
+    <div class="legend">
+      <div><span class="dot" style="background:#3b82f6;"></span>波函数正相位 (+)</div>
+      <div><span class="dot" style="background:#f43f5e;"></span>波函数负相位 (-)</div>
+      <div><span class="dot" style="background:#94a3b8;"></span>径向节面数: <span id="radial-nodes">0</span></div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="header-card">
+      <div>
+        <div style="font-size:0.75rem;color:var(--muted);">当前原子轨道 / 量子态</div>
+        <div class="orbital-badge" id="orbital-title">2p<sub>z</sub></div>
+      </div>
+      <div class="spin-badge" id="spin-display">m<sub>s</sub> = +1/2 ↑</div>
+    </div>
+
+    <!-- 主量子数 n -->
+    <div class="control-group">
+      <div class="control-title">
+        <span>1. 主量子数 n (第几层楼)</span>
+        <span id="layer-name" style="color:var(--accent);">L 层</span>
+      </div>
+      <div class="control-sub">取值：正整数 1, 2, 3, 4... 决定轨道大小与主能量</div>
+      <div class="btn-row" id="n-buttons"></div>
+    </div>
+
+    <!-- 角量子数 l -->
+    <div class="control-group">
+      <div class="control-title">
+        <span>2. 角量子数 l (什么户型)</span>
+        <span id="l-limit" style="color:var(--accent);">范围: 0 ~ n-1</span>
+      </div>
+      <div class="control-sub">铁律：l 最大只能取到 n-1，决定轨道形状 (s/p/d/f)</div>
+      <div class="btn-row" id="l-buttons"></div>
+    </div>
+
+    <!-- 磁量子数 m -->
+    <div class="control-group">
+      <div class="control-title">
+        <span>3. 磁量子数 m (哪间房/朝向)</span>
+        <span id="m-limit" style="color:var(--accent);">共 2l+1 个</span>
+      </div>
+      <div class="control-sub">范围：-l 到 +l，决定空间伸展方向</div>
+      <div class="btn-row" id="m-buttons"></div>
+    </div>
+
+    <!-- 自旋量子数 ms -->
+    <div class="control-group">
+      <div class="control-title">
+        <span>4. 自旋量子数 m<sub>s</sub> (上下铺)</span>
+        <span style="color:var(--accent);">±1/2</span>
+      </div>
+      <div class="control-sub">决定电子自旋方向，每个轨道最多容纳 2 个反平行电子</div>
+      <div class="btn-row" id="ms-buttons"></div>
+    </div>
+
+    <div class="info-box" id="analogy-box"></div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // --- 1. 状态定义 ---
+    const state = { n: 2, l: 1, m: 0, ms: 0.5 };
+    const subshellLetters = ['s', 'p', 'd', 'f'];
+    const shellLetters = ['K', 'L', 'M', 'N'];
+
+    // --- 2. Three.js 场景初始化 ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.set(4.5, 3.5, 5.0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // 灯光与坐标轴
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(5, 8, 6);
+    scene.add(dirLight);
+
+    const axesHelper = new THREE.AxesHelper(2.8);
+    scene.add(axesHelper);
+
+    const orbitalGroup = new THREE.Group();
+    scene.add(orbitalGroup);
+
+    // 自旋指示箭头
+    const spinArrow = new THREE.ArrowHelper(
+      new THREE.Vector3(0, 1, 0),
+      new THREE.Vector3(2.2, -1.0, 0),
+      2.0,
+      0x38bdf8,
+      0.4,
+      0.25
+    );
+    scene.add(spinArrow);
+
+    // --- 3. 实球谐函数角度分布计算 Y_{l,m}(theta, phi) ---
+    function evaluateRealSphericalHarmonic(l, m, theta, phi) {
+      const x = Math.sin(theta) * Math.cos(phi);
+      const y = Math.sin(theta) * Math.sin(phi);
+      const z = Math.cos(theta);
+
+      if (l === 0) return 0.5; // s 轨道：球形
+      if (l === 1) {
+        // p 轨道：哑铃形
+        if (m === -1) return y;
+        if (m === 0)  return z;
+        if (m === 1)  return x;
+      }
+      if (l === 2) {
+        // d 轨道：梅花形 & 环形哑铃
+        if (m === -2) return 2 * x * y;
+        if (m === -1) return 2 * y * z;
+        if (m === 0)  return 0.5 * (3 * z * z - 1);
+        if (m === 1)  return 2 * x * z;
+        if (m === 2)  return x * x - y * y;
+      }
+      if (l === 3) {
+        // f 轨道：复杂多瓣形
+        if (m === -3) return y * (3 * x * x - y * y);
+        if (m === -2) return 2 * x * y * z;
+        if (m === -1) return y * (5 * z * z - 1);
+        if (m === 0)  return 0.5 * z * (5 * z * z - 3);
+        if (m === 1)  return x * (5 * z * z - 1);
+        if (m === 2)  return z * (x * x - y * y);
+        if (m === 3)  return x * (x * x - 3 * y * y);
+      }
+      return 0.5;
+    }
+
+    // --- 4. 生成 3D 轨道网格 ---
+    function buildOrbitalMesh() {
+      while (orbitalGroup.children.length > 0) {
+        const child = orbitalGroup.children[0];
+        child.geometry.dispose();
+        orbitalGroup.remove(child);
+      }
+
+      const { n, l, m } = state;
+      const scaleFactor = 0.8 + n * 0.38; // 主量子数 n 越大，轨道体积越大
+      const latSteps = 72;
+      const lonSteps = 72;
+
+      // 分别构建正相位(+)与负相位(-)两个瓣的网格
+      [1, -1].forEach(targetSign => {
+        const positions = [];
+        const indices = [];
+
+        for (let i = 0; i <= latSteps; i++) {
+          const theta = (i * Math.PI) / latSteps;
+          for (let j = 0; j <= lonSteps; j++) {
+            const phi = (j * 2 * Math.PI) / lonSteps;
+            const val = evaluateRealSphericalHarmonic(l, m, theta, phi);
+            const r = (Math.sign(val) === targetSign) ? Math.abs(val) * scaleFactor : 0;
+
+            const px = r * Math.sin(theta) * Math.cos(phi);
+            const py = r * Math.cos(theta); // Three.js 中 Y 轴向上对应极轴 Z
+            const pz = r * Math.sin(theta) * Math.sin(phi);
+            positions.push(px, py, pz);
+          }
+        }
+
+        for (let i = 0; i < latSteps; i++) {
+          for (let j = 0; j < lonSteps; j++) {
+            const a = i * (lonSteps + 1) + j;
+            const b = a + lonSteps + 1;
+            indices.push(a, b, a + 1);
+            indices.push(b, b + 1, a + 1);
+          }
+        }
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geo.setIndex(indices);
+        geo.computeVertexNormals();
+
+        const mat = new THREE.MeshPhysicalMaterial({
+          color: targetSign > 0 ? 0x3b82f6 : 0xf43f5e,
+          roughness: 0.25,
+          metalness: 0.1,
+          transparent: true,
+          opacity: 0.86,
+          side: THREE.DoubleSide
+        });
+
+        orbitalGroup.add(new THREE.Mesh(geo, mat));
+      });
+
+      // 更新自旋箭头方向
+      if (state.ms > 0) {
+        spinArrow.setDirection(new THREE.Vector3(0, 1, 0));
+        spinArrow.position.set(2.4, -1.0, 0);
+      } else {
+        spinArrow.setDirection(new THREE.Vector3(0, -1, 0));
+        spinArrow.position.set(2.4, 1.0, 0);
+      }
+    }
+
+    // --- 5. UI 渲染与约束联动 ---
+    function getOrbitalSubscript(l, m) {
+      if (l === 0) return '';
+      if (l === 1) return { '-1': 'y', '0': 'z', '1': 'x' }[m];
+      if (l === 2) return { '-2': 'xy', '-1': 'yz', '0': 'z²', '1': 'xz', '2': 'x²-y²' }[m];
+      return `m=${m}`;
+    }
+
+    function updateUI() {
+      // 严格 enforcing 量子数约束: l <= n-1, |m| <= l
+      if (state.l >= state.n) state.l = state.n - 1;
+      if (Math.abs(state.m) > state.l) state.m = 0;
+
+      const { n, l, m, ms } = state;
+      const sub = getOrbitalSubscript(l, m);
+      document.getElementById('orbital-title').innerHTML = `${n}${subshellLetters[l]}<sub>${sub}</sub>`;
+      document.getElementById('spin-display').innerHTML = `m<sub>s</sub> = ${ms > 0 ? '+1/2 ↑' : '-1/2 ↓'}`;
+      document.getElementById('layer-name').textContent = `${shellLetters[n - 1]} 层 (第 ${n} 层)`;
+      document.getElementById('l-limit').textContent = `合法值: 0 ~ ${n - 1}`;
+      document.getElementById('m-limit').textContent = `共 ${2 * l + 1} 个轨道`;
+      document.getElementById('radial-nodes').textContent = n - l - 1;
+
+      // 渲染 n 按钮 (1 ~ 4)
+      const nRow = document.getElementById('n-buttons');
+      nRow.innerHTML = '';
+      [1, 2, 3, 4].forEach(val => {
+        const btn = document.createElement('button');
+        btn.textContent = `n=${val}`;
+        if (val === n) btn.classList.add('active');
+        btn.onclick = () => { state.n = val; updateUI(); };
+        nRow.appendChild(btn);
+      });
+
+      // 渲染 l 按钮 (0 ~ 3，超出 n-1 的禁用)
+      const lRow = document.getElementById('l-buttons');
+      lRow.innerHTML = '';
+      [0, 1, 2, 3].forEach(val => {
+        const btn = document.createElement('button');
+        btn.textContent = `${val} (${subshellLetters[val]})`;
+        if (val >= n) btn.disabled = true;
+        if (val === l) btn.classList.add('active');
+        btn.onclick = () => { state.l = val; updateUI(); };
+        lRow.appendChild(btn);
+      });
+
+      // 渲染 m 按钮 (-l ~ +l)
+      const mRow = document.getElementById('m-buttons');
+      mRow.innerHTML = '';
+      for (let val = -l; val <= l; val++) {
+        const btn = document.createElement('button');
+        btn.textContent = val > 0 ? `+${val}` : `${val}`;
+        if (val === m) btn.classList.add('active');
+        btn.onclick = () => { state.m = val; updateUI(); };
+        mRow.appendChild(btn);
+      }
+
+      // 渲染 ms 按钮
+      const msRow = document.getElementById('ms-buttons');
+      msRow.innerHTML = '';
+      [0.5, -0.5].forEach(val => {
+        const btn = document.createElement('button');
+        btn.textContent = val > 0 ? '+1/2 (↑ 上铺)' : '-1/2 (↓ 下铺)';
+        if (val === ms) btn.classList.add('active');
+        btn.onclick = () => { state.ms = val; updateUI(); };
+        msRow.appendChild(btn);
+      });
+
+      // 更新底部宿舍类比解析
+      document.getElementById('analogy-box').innerHTML = `
+        <strong>📍 当前四级定位解读：</strong><br/>
+        • 住在 <strong>${n} 楼 (${shellLetters[n-1]}层)</strong>，该层共有 ${n} 种户型、${n*n} 间房，最多住 ${2*n*n} 个电子。<br/>
+        • 选了 <strong>l = ${l} (${subshellLetters[l]} 亚层)</strong> 户型，共有 <strong>2l+1 = ${2*l+1}</strong> 个不同朝向的房间，最多住 ${2*(2*l+1)} 个电子。<br/>
+        • 当前房间号 <strong>m = ${m}</strong>，睡在 <strong>${ms > 0 ? '上铺 (+1/2)' : '下铺 (-1/2)'}</strong>。
+      `;
+
+      buildOrbitalMesh();
+    }
+
+    // --- 6. 动画循环与自适应窗口 ---
+    function animate() {
+      requestAnimationFrame(animate);
+      orbitalGroup.rotation.y += 0.004;
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    updateUI();
+    animate();
+  </script>
+</body>
+</html>
